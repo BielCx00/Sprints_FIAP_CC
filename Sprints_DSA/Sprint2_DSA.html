@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Sistema de Recarga EV</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    header span {
+      font-size: 1.5rem;
+    }
+
+    .container {
+      display: flex;
+      height: calc(100vh - 58px);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 260px;
+      background: #fff;
+      border-right: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #888;
+      letter-spacing: 1px;
+    }
+
+    .session-card {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .session-card:hover {
+      border-color: #4a90d9;
+    }
+
+    .session-card.active {
+      border-color: #4a90d9;
+      background: #eef4fc;
+    }
+
+    .session-card .sc-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .session-card .sc-info {
+      font-size: 0.78rem;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .badge-normal {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge-reduzido {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .badge-bloqueado {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .badge-concluido {
+      background: #e2e3e5;
+      color: #383d41;
+    }
+
+    /* MAIN */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e0e0e0;
+      background: #fff;
+    }
+
+    .tab {
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      color: #666;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: #1a1a2e;
+      border-bottom-color: #4a90d9;
+      font-weight: 600;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* CARDS */
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      margin-bottom: 14px;
+      color: #1a1a2e;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 140px;
+      flex: 1;
+    }
+
+    .form-group label {
+      font-size: 0.78rem;
+      color: #555;
+    }
+
+    .form-group input,
+    .form-group select {
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.88rem;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.85;
+    }
+
+    .btn-primary {
+      background: #1a1a2e;
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 0.8rem;
+    }
+
+    .info-box {
+      background: #eef4fc;
+      border-left: 3px solid #4a90d9;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+
+    .warn-box {
+      background: #fff3cd;
+      border-left: 3px solid #f0a500;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+
+    .err-box {
+      background: #f8d7da;
+      border-left: 3px solid #dc3545;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+
+    /* DEMANDA GLOBAL */
+    .demanda-bar-wrap {
+      background: #eee;
+      border-radius: 99px;
+      height: 10px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+
+    .demanda-bar {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.4s, background 0.4s;
+    }
+
+    /* TABELA */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    th {
+      background: #f0f0f0;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* LOG OCPP */
+    .log-area {
+      background: #1a1a2e;
+      color: #a8d8a8;
+      font-family: monospace;
+      font-size: 0.8rem;
+      padding: 14px;
+      border-radius: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+
+    .log-area .log-ts {
+      color: #888;
+    }
+
+    .log-area .log-send {
+      color: #7ec8e3;
+    }
+
+    .log-area .log-recv {
+      color: #a8d8a8;
+    }
+
+    .log-area .log-err {
+      color: #ff8888;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 700px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+        max-height: 220px;
+      }
+
+      .grid2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <span></span>
+    <h1>Sistema de Gerenciamento de Recarga EV</h1>
+  </header>
+
+  <div class="container">
+
+    <!-- SIDEBAR: lista de sessões ativas -->
+    <div class="sidebar">
+      <h3>Sessões Ativas</h3>
+      <div id="sidebar-sessoes">
+        <p style="font-size:0.8rem;color:#aaa;">Nenhuma sessão.</p>
+      </div>
+      <hr style="border:none;border-top:1px solid #eee;">
+      <h3>Histórico</h3>
+      <div id="sidebar-historico">
+        <p style="font-size:0.8rem;color:#aaa;">Nenhuma sessão concluída.</p>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="tabs">
+        <div class="tab active" onclick="mudarTab('nova')">Nova Sessão</div>
+        <div class="tab" onclick="mudarTab('monitoramento')">Monitoramento</div>
+        <div class="tab" onclick="mudarTab('relatorio')">Relatório</div>
+        <div class="tab" onclick="mudarTab('ocpp')">Log OCPP</div>
+      </div>
+
+      <!-- NOVA SESSÃO -->
+      <div id="tab-nova" class="tab-content active">
+        <div class="card">
+          <h2>Iniciar Nova Sessão</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nome / Veículo</label>
+              <input type="text" id="nova-nome" placeholder="Ex: Carro A">
+            </div>
+            <div class="form-group">
+              <label>Tipo de Usuário</label>
+              <div class="radio-group">
+                <label><input type="radio" name="nova-tipo" value="morador" checked> Morador</label>
+                <label><input type="radio" name="nova-tipo" value="visitante"> Visitante</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>% Bateria Atual</label>
+              <input type="number" id="nova-bateria" min="0" max="99" placeholder="0–99" oninput="previewTempo()">
+            </div>
+            <div class="form-group">
+              <label>Placas Solares (unidades)</label>
+              <input type="number" id="nova-placas" min="0" placeholder="0">
+            </div>
+          </div>
+          <div id="preview-tempo" class="info-box" style="display:none;"></div>
+          <div id="demanda-aviso" style="margin-bottom:12px;"></div>
+          <button class="btn btn-primary" onclick="iniciarSessao()">Iniciar Sessão</button>
+        </div>
+
+        <div class="card">
+          <h2>Demanda Global do Sistema</h2>
+          <div id="demanda-global-info"></div>
+          <div class="demanda-bar-wrap">
+            <div class="demanda-bar" id="demanda-bar"></div>
+          </div>
+          <p style="font-size:0.78rem;color:#888;">Limite total: <strong>28 kW</strong> (4 carregadores × 7 kW)</p>
+        </div>
+      </div>
+
+      <!-- MONITORAMENTO -->
+      <div id="tab-monitoramento" class="tab-content">
+        <div class="card">
+          <h2>Finalizar Sessão Ativa</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Selecionar Sessão</label>
+              <select id="sel-sessao"></select>
+            </div>
+            <div class="form-group">
+              <label>Horário de Fim</label>
+              <input type="time" id="mon-fim">
+            </div>
+          </div>
+          <button class="btn btn-danger" onclick="finalizarSessao()">Finalizar Sessão</button>
+        </div>
+
+        <div class="card">
+          <h2>Sessões em Andamento</h2>
+          <div id="tabela-ativas">
+            <p style="font-size:0.85rem;color:#aaa;">Nenhuma sessão ativa.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RELATÓRIO -->
+      <div id="tab-relatorio" class="tab-content">
+        <div class="grid2">
+          <div class="card">
+            <h2>Resumo Geral</h2>
+            <div id="resumo-geral">
+              <p style="font-size:0.85rem;color:#aaa;">Sem dados.</p>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Tarifa por Horário</h2>
+            <table>
+              <tr>
+                <th>Período</th>
+                <th>Fator</th>
+              </tr>
+              <tr>
+                <td>Fora de ponta (antes 16:30 ou após 21:30)</td>
+                <td>×0,70</td>
+              </tr>
+              <tr>
+                <td>Intermediário (16:30–17:30 / 20:30–21:30)</td>
+                <td>×1,30</td>
+              </tr>
+              <tr>
+                <td>Ponta (17:30–20:30)</td>
+                <td>×2,00</td>
+              </tr>
+              <tr>
+                <td>Visitante</td>
+                <td>+20%</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Histórico de Sessões</h2>
+          <div id="tabela-historico">
+            <p style="font-size:0.85rem;color:#aaa;">Nenhuma sessão concluída.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: LOG OCPP -->
+      <div id="tab-ocpp" class="tab-content">
+        <div class="card">
+          <h2>Simulação de Protocolo OCPP 1.6</h2>
+          <p style="font-size:0.82rem;color:#666;margin-bottom:14px;">
+            Mensagens simuladas no formato OCPP (JSON-array): <code>[MessageTypeId, UniqueId, Action, Payload]</code>
+          </p>
+          <div class="log-area" id="log-ocpp"></div>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="limparLog()">Limpar Log</button>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /container -->
+
+  <script>
+    //  ESTADO GLOBAL 
+    const CFG = {
+      capacidade: 60,
+      potencia: 7, // kW por carregador (fixo)
+      tarifa: 0.72,
+      maxCarregadores: 4
+    };
+
+    let sessoesAtivas = [];
+    let sessoesHistorico = [];
+    let ocppLog = [];
+    let sessionCounter = 0;
+    let consumoCasa = 0; // estado fixo, atualizado só quando sessão entra/sai
+
+    // UTILITÁRIOS 
+    function agora() {
+      return new Intl.DateTimeFormat('pt-BR', {
+        timeStyle: 'short'
+      }).format(new Date());
+    }
+
+    function hoje() {
+      return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short'
+      }).format(new Date());
+    }
+
+    function horaParaDecimal(TempHr) {
+      const [hh, mm] = TempHr.split(':').map(Number);
+      return hh + mm / 60;
+    }
+
+    function faixaTarifa(hDecimal) {
+      const TempHr = ((hDecimal % 24) + 24) % 24; // normaliza para 0–24
+      if (TempHr < 16.5 || TempHr >= 21.5) return 0.7;
+      if ((TempHr >= 16.5 && TempHr < 17.5) || (TempHr >= 20.5 && TempHr < 21.5)) return 1.3;
+      return 2.0;
+    }
+
+    // Divide o período início→fim em fatias por faixa tarifária.
+    // Retorna { precoBruto, tarifaMedia, fatias[] } onde cada fatia tem { label, horas, fator, custo }
+    function calcCustoFatias(inicioStr, fimStr, potenciaKw, energiaNecessaria, tipoUsuario) {
+      const ini = horaParaDecimal(inicioStr);
+      let fim = horaParaDecimal(fimStr);
+      if (fim <= ini) fim += 24; // overnight
+
+      // Limites das faixas em ordem dentro de um ciclo de 24h (repetido se necessário)
+      const limites = [0, 16.5, 17.5, 20.5, 21.5, 24, 40.5, 41.5, 44.5, 45.5, 48];
+      const nomes = ['Fora de ponta', 'Intermediário', 'Ponta', 'Intermediário', 'Fora de ponta',
+        'Fora de ponta', 'Intermediário', 'Ponta', 'Intermediário', 'Fora de ponta'
+      ];
+
+      let multiplicadorUsuario;
+      if (tipoUsuario === 'visitante') {
+        multiplicadorUsuario = 1.2;
+      } else {
+        multiplicadorUsuario = 1.0;
+      }
+      let energiaRestante = energiaNecessaria;
+      let precoBruto = 0;
+      let horasTotais = 0;
+      const fatias = [];
+
+      for (let i = 0; i < limites.length - 1 && energiaRestante > 0; i++) {
+        const fIni = limites[i],
+          fFim = limites[i + 1];
+        const sobrepostoIni = Math.max(ini, fIni);
+        const sobrepostoFim = Math.min(fim, fFim);
+        if (sobrepostoFim <= sobrepostoIni) continue;
+
+        const horas = sobrepostoFim - sobrepostoIni;
+        const energiaFaixa = Math.min(potenciaKw * horas, energiaRestante);
+        const fator = faixaTarifa(fIni) * multiplicadorUsuario;
+        const custo = energiaFaixa * CFG.tarifa * fator;
+
+        energiaRestante -= energiaFaixa;
+        precoBruto += custo;
+        horasTotais += horas;
+
+        fatias.push({
+          label: nomes[i],
+          horas: horas.toFixed(2),
+          fator: fator.toFixed(2),
+          energiaFaixa: energiaFaixa.toFixed(2),
+          custo: custo.toFixed(2)
+        });
+      }
+
+      const energiaBruta = energiaNecessaria - energiaRestante; // energia total realmente entregue
+      let tarifaMedia;
+      if (energiaBruta > 0) {
+        tarifaMedia = precoBruto / energiaBruta;
+      } else {
+        tarifaMedia = 0;
+      }
+      return {
+        precoBruto,
+        tarifaMedia,
+        energiaBruta,
+        fatias
+      };
+    }
+
+    // CONTROLE DE DEMANDA 
+    // consumoCasa é sorteado UMA VEZ por evento (entrada/saída de sessão)
+    // e mantido fixo até o próximo evento. A potência de cada carregador
+    // é reduzida proporcionalmente para caber dentro do limite de 28 kW.
+    function atualizarDemanda() {
+      consumoCasa = Math.random() * 10;
+
+      const numSA = sessoesAtivas.length;
+      const max = CFG.potencia * CFG.maxCarregadores; // 28 kW
+      const disponivelCarregadores = Math.max(0, max - consumoCasa);
+
+      let potenciaPorVeiculo;
+      if (numSA > 0) {
+        potenciaPorVeiculo = Math.min(CFG.potencia, disponivelCarregadores / numSA);
+      } else {
+        potenciaPorVeiculo = 0;
+      }
+
+      sessoesAtivas.forEach(tempSessao => {
+        tempSessao.potenciaAtual = potenciaPorVeiculo;
+        if (potenciaPorVeiculo <= 0) tempSessao.status = 'bloqueado';
+        else if (potenciaPorVeiculo < CFG.potencia * 0.85) tempSessao.status = 'reduzido';
+        else tempSessao.status = 'normal';
+      });
+
+      const totalCarregadores = potenciaPorVeiculo * numSA;
+      const totalSistema = totalCarregadores + consumoCasa;
+      const pct = Math.min(100, (totalSistema / max) * 100);
+
+      const bar = document.getElementById('demanda-bar');
+      bar.style.width = pct + '%';
+      if (pct > 90) {
+        bar.style.background = '#dc3545';
+      } else if (pct > 65) {
+        bar.style.background = '#f0a500';
+      } else {
+        bar.style.background = '#28a745';
+      }
+
+      document.getElementById('demanda-global-info').innerHTML =
+        `<p style="font-size:0.85rem;">
+        Carregadores: <strong>${totalCarregadores.toFixed(1)} kW</strong>
+        (${numSA} × ${potenciaPorVeiculo.toFixed(1)} kW) &nbsp;+&nbsp;
+        Consumo residencial: <strong>${consumoCasa.toFixed(1)} kW</strong>
+        &nbsp;=&nbsp; <strong>${totalSistema.toFixed(1)} kW</strong> de ${max} kW totais
+      </p>`;
+    }
+
+    // OCPP SIMULADO
+    function ocppEnviar(action, payload) {
+      const uid = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const msg = JSON.stringify([2, uid, action, payload]);
+      const ts = agora();
+      ocppLog.push({
+        ts,
+        dir: 'send',
+        txt: `→ [SEND] ${action} | ${msg}`
+      });
+      // Simula resposta do servidor
+      setTimeout(() => {
+        const resp = JSON.stringify([3, uid, {
+          status: 'Accepted'
+        }]);
+        ocppLog.push({
+          ts: agora(),
+          dir: 'recv',
+          txt: `← [RECV] ${action}Response | ${resp}`
+        });
+        renderLog();
+      }, 300);
+      renderLog();
+    }
+
+    function renderLog() {
+      const el = document.getElementById('log-ocpp');
+
+      let linhas = '';
+      for (let i = 0; i < ocppLog.length; i++) {
+        const l = ocppLog[i];
+        let classeLog;
+        if (l.dir === 'send') {
+          classeLog = 'log-send';
+        } else {
+          classeLog = 'log-recv';
+        }
+        linhas += '<div><span class="log-ts">[' + l.ts + ']</span> <span class="' + classeLog + '">' + l.txt +
+          '</span></div>';
+      }
+
+      el.innerHTML = linhas;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function limparLog() {
+      ocppLog = [];
+      renderLog();
+    }
+
+    // PREVIEW TEMPO ESTIMADO
+    function previewTempo() {
+      const bat = Number(document.getElementById('nova-bateria').value);
+      const box = document.getElementById('preview-tempo');
+      if (isNaN(bat) || bat === '') {
+        box.style.display = 'none';
+        return;
+      }
+      if (bat >= 100) {
+        box.style.display = 'block';
+        box.textContent = 'Bateria já cheia.';
+        return;
+      }
+      const restante = CFG.capacidade * (100 - bat) / 100;
+      const tempo = restante / CFG.potencia;
+      box.style.display = 'block';
+      box.textContent =
+        `Tempo estimado a ${CFG.potencia} kW: ${tempo.toFixed(2)}h | Energia necessária: ${restante.toFixed(1)} kWh`;
+    }
+
+    // INICIAR SESSÃO 
+    function iniciarSessao() {
+      const nome = document.getElementById('nova-nome').value.trim();
+
+      const tipoElemento = document.querySelector('input[name="nova-tipo"]:checked');
+      let tipo;
+      if (tipoElemento !== null) {
+        tipo = tipoElemento.value;
+      } else {
+        tipo = undefined;
+      }
+
+      const bateria = Number(document.getElementById('nova-bateria').value);
+      const placas = Number(document.getElementById('nova-placas').value) || 0;
+
+      if (!nome || !tipo || isNaN(bateria) || bateria < 0 || bateria >= 100) {
+        alert('Preencha todos os campos corretamente (bateria entre 0 e 99).');
+        return;
+      }
+
+      if (sessoesAtivas.length >= CFG.maxCarregadores) {
+        alert(`Limite de ${CFG.maxCarregadores} carregadores simultâneos atingido.`);
+        return;
+      }
+
+      const sessao = {
+        id: ++sessionCounter,
+        nome,
+        tipo,
+        bateriaInicial: bateria,
+        placas,
+        inicio: agora(),
+        data: hoje(),
+        potenciaAtual: CFG.potencia,
+        status: 'normal'
+      };
+
+      sessoesAtivas.push(sessao);
+      atualizarDemanda();
+
+      ocppEnviar('BootNotification', {
+        chargePointModel: 'EV-SIM',
+        chargePointVendor: 'DSA'
+      });
+      ocppEnviar('StatusNotification', {
+        connectorId: sessao.id,
+        status: 'Charging',
+        errorCode: 'NoError'
+      });
+      ocppEnviar('StartTransaction', {
+        connectorId: sessao.id,
+        idTag: nome,
+        meterStart: 0,
+        timestamp: new Date().toISOString()
+      });
+
+      renderSidebar();
+      renderTabelaAtivas();
+      renderSelectSessoes();
+      atualizarResumo();
+
+      document.getElementById('nova-nome').value = '';
+      document.getElementById('nova-bateria').value = '';
+      document.getElementById('nova-placas').value = '';
+      document.getElementById('preview-tempo').style.display = 'none';
+    }
+
+    // FINALIZAR SESSÃO 
+    function finalizarSessao() {
+      const idx = document.getElementById('sel-sessao').value;
+      const horarioFim = document.getElementById('mon-fim').value;
+
+      if (idx === '' || !horarioFim) {
+        alert('Selecione uma sessão e informe o horário de fim.');
+        return;
+      }
+
+      const sessao = sessoesAtivas[idx];
+
+      // Energia máxima que a bateria ainda aceita
+      const energiaNecessaria = CFG.capacidade * (100 - sessao.bateriaInicial) / 100;
+
+      // Cobrança por fatias de horário (suporta overnight)
+      const {
+        precoBruto,
+        tarifaMedia,
+        energiaBruta,
+        fatias
+      } =
+      calcCustoFatias(sessao.inicio, horarioFim, sessao.potenciaAtual, energiaNecessaria, sessao.tipo);
+
+      // Desconto solar em kWh e em R$ (usando tarifa média ponderada)
+      const descontoKwh = Math.min(sessao.placas * 0.2, energiaBruta);
+      const descontoReais = descontoKwh * tarifaMedia;
+      const energiaFaturada = Math.max(0, energiaBruta - descontoKwh);
+      const precoFinal = Math.max(0, precoBruto - descontoReais);
+
+      // Bateria final sobre energia bruta entregue (desconto solar não afeta carga física)
+      const bateriaFinal = Math.min(100, sessao.bateriaInicial + (energiaBruta / CFG.capacidade) * 100);
+
+      const registro = {
+        ...sessao,
+        fim: horarioFim,
+        bateriaFinal: bateriaFinal.toFixed(1),
+        energiaBruta: energiaBruta.toFixed(2),
+        descontoKwh: descontoKwh.toFixed(2),
+        energiaFaturada: energiaFaturada.toFixed(2),
+        tarifaMedia: tarifaMedia.toFixed(3),
+        precoBruto: precoBruto.toFixed(2),
+        descontoReais: descontoReais.toFixed(2),
+        precoFinal: precoFinal.toFixed(2),
+        fatias,
+        statusFinal: sessao.status
+      };
+
+      sessoesHistorico.push(registro);
+      sessoesAtivas.splice(idx, 1);
+      atualizarDemanda();
+
+      ocppEnviar('StopTransaction', {
+        transactionId: sessao.id,
+        meterStop: Math.round(energiaFaturada * 1000),
+        timestamp: new Date().toISOString(),
+        reason: 'Local'
+      });
+      ocppEnviar('StatusNotification', {
+        connectorId: sessao.id,
+        status: 'Available',
+        errorCode: 'NoError'
+      });
+
+      renderSidebar();
+      renderTabelaAtivas();
+      renderSelectSessoes();
+      renderHistorico();
+      atualizarResumo();
+      mudarTab('relatorio');
+    }
+
+    // RENDERIZAÇÕES 
+    function renderSidebar() {
+      const elAtivas = document.getElementById('sidebar-sessoes');
+      const elHist = document.getElementById('sidebar-historico');
+
+      if (sessoesAtivas.length > 0) {
+        elAtivas.innerHTML = sessoesAtivas.map(tempSessao =>
+          `<div class="session-card">
+          <div class="sc-name">${tempSessao.nome}</div>
+          <div class="sc-info">${tempSessao.tipo} · desde ${tempSessao.inicio}</div>
+          <div style="margin-top:4px"><span class="badge badge-${tempSessao.status}">${tempSessao.status}</span></div>
+        </div>`
+        ).join('');
+      } else {
+        elAtivas.innerHTML = '<p style="font-size:0.8rem;color:#aaa;">Nenhuma sessão.</p>';
+      }
+
+      if (sessoesHistorico.length > 0) {
+        elHist.innerHTML = sessoesHistorico.slice(-5).reverse().map(tempSessao =>
+          `<div class="session-card">
+          <div class="sc-name">${tempSessao.nome}</div>
+          <div class="sc-info">${tempSessao.energiaFaturada} kWh · R$ ${tempSessao.precoFinal}</div>
+          <span class="badge badge-concluido">concluído</span>
+        </div>`
+        ).join('');
+      } else {
+        elHist.innerHTML = '<p style="font-size:0.8rem;color:#aaa;">Nenhuma sessão concluída.</p>';
+      }
+    }
+
+    function renderTabelaAtivas() {
+      const el = document.getElementById('tabela-ativas');
+      if (!sessoesAtivas.length) {
+        el.innerHTML = '<p style="font-size:0.85rem;color:#aaa;">Nenhuma sessão ativa.</p>';
+        return;
+      }
+      el.innerHTML = `<table>
+      <tr><th>#</th><th>Nome</th><th>Tipo</th><th>Bateria ini.</th><th>Potência</th><th>Status</th><th>Início</th></tr>
+      ${sessoesAtivas.map((tempSessao, i) => `
+        <tr>
+          <td>${tempSessao.id}</td>
+          <td>${tempSessao.nome}</td>
+          <td>${tempSessao.tipo}</td>
+          <td>${tempSessao.bateriaInicial}%</td>
+          <td>${tempSessao.potenciaAtual.toFixed(1)} kW</td>
+          <td><span class="badge badge-${tempSessao.status}">${tempSessao.status}</span></td>
+          <td>${tempSessao.inicio}</td>
+        </tr>`).join('')}
+    </table>`;
+    }
+
+    function renderSelectSessoes() {
+      const sel = document.getElementById('sel-sessao');
+
+      if (sessoesAtivas.length > 0) {
+        sel.innerHTML = sessoesAtivas.map((tempSessao, i) =>
+          `<option value="${i}">${tempSessao.nome} (${tempSessao.tipo}) · desde ${tempSessao.inicio}</option>`
+        ).join('');
+      } else {
+        sel.innerHTML = '<option value="">Nenhuma sessão ativa</option>';
+      }
+    }
+
+    function renderHistorico() {
+      const el = document.getElementById('tabela-historico');
+      if (!sessoesHistorico.length) {
+        el.innerHTML = '<p style="font-size:0.85rem;color:#aaa;">Nenhuma sessão concluída.</p>';
+        return;
+      }
+      el.innerHTML = sessoesHistorico.map(tempSessao => `
+      <div style="border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <div>
+            <strong>${tempSessao.nome}</strong>
+            <span class="badge badge-${tempSessao.statusFinal}" style="margin-left:6px;">${tempSessao.statusFinal}</span>
+            <span style="font-size:0.78rem;color:#666;margin-left:8px;">${tempSessao.tipo} · ${tempSessao.data} · ${tempSessao.inicio} → ${tempSessao.fim}</span>
+          </div>
+          <div style="font-size:1rem;font-weight:700;">R$ ${tempSessao.precoFinal}</div>
+        </div>
+        <table>
+          <tr><th>Bateria ini.</th><th>Bateria fin.</th><th>Energia bruta</th><th>Tarifa média</th><th>Preço bruto</th></tr>
+          <tr>
+            <td>${tempSessao.bateriaInicial}%</td>
+            <td>${tempSessao.bateriaFinal.replace('.', ',')}%</td>
+            <td>${tempSessao.energiaBruta} kWh</td>
+            <td>R$ ${tempSessao.tarifaMedia.replace('.', ',')}/kWh</td>
+            <td>R$ ${tempSessao.precoBruto.replace('.', ',')}</td>
+          </tr>
+        </table>
+        ${tempSessao.fatias.length > 1 ? `
+        <details style="margin-top:8px;">
+          <summary style="font-size:0.78rem;cursor:pointer;color:#4a90d9;">Detalhamento por faixa tarifária</summary>
+          <table style="margin-top:6px;">
+            <tr><th>Faixa</th><th>Duração</th><th>Fator</th><th>Energia</th><th>Custo</th></tr>
+            ${tempSessao.fatias.map(f => `
+              <tr>
+                <td>${f.label}</td>
+                <td>${f.horas}h</td>
+                <td>×${f.fator.replace('.', ',')}</td>
+                <td>${f.energiaFaixa} kWh</td>
+                <td>R$ ${f.custo.replace('.', ',')}</td>
+              </tr>`).join('')}
+          </table>
+        </details>` : ''}
+        ${Number(tempSessao.descontoKwh) > 0 ? `
+        <div style="margin-top:8px;font-size:0.82rem;color:#28a745;">
+          Desconto solar: −${tempSessao.descontoKwh} kWh × tarifa média = −R$ ${tempSessao.descontoReais.replace('.', ',')}
+          &nbsp;|&nbsp; Energia faturada: ${tempSessao.energiaFaturada} kWh
+        </div>` : ''}
+      </div>`).join('');
+    }
+
+    function atualizarResumo() {
+      const el = document.getElementById('resumo-geral');
+      const totalSessoes = sessoesHistorico.length;
+      const totalEnergia = sessoesHistorico.reduce((contadorS, x) => contadorS + Number(x.energiaFaturada), 0);
+      const totalReceita = sessoesHistorico.reduce((contadorS, x) => contadorS + Number(x.precoFinal), 0);
+      const totalDesconto = sessoesHistorico.reduce((contadorS, x) => contadorS + Number(x.descontoReais), 0);
+      if (totalSessoes > 0) {
+        el.innerHTML = `<table>
+          <tr><td>Sessões concluídas</td><td><strong>${totalSessoes}</strong></td></tr>
+          <tr><td>Sessões ativas</td><td><strong>${sessoesAtivas.length}</strong></td></tr>
+          <tr><td>Energia total faturada</td><td><strong>${totalEnergia.toFixed(2)} kWh</strong></td></tr>
+          <tr><td>Receita total</td><td><strong>R$ ${totalReceita.toFixed(2).replace('.', ',')}</strong></td></tr>
+          <tr><td>Desconto solar total</td><td style="color:#28a745;"><strong>− R$ ${totalDesconto.toFixed(2).replace('.', ',')}</strong></td></tr>
+        </table>`;
+      } else {
+        el.innerHTML = '<p style="font-size:0.85rem;color:#aaa;">Sem dados.</p>';
+      }
+    }
+
+    // TABS 
+    function mudarTab(id) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      document.querySelectorAll('.tab')[['nova', 'monitoramento', 'relatorio', 'ocpp'].indexOf(id)].classList.add('active');
+      if (id === 'monitoramento') renderTabelaAtivas();
+      if (id === 'relatorio') {
+        renderHistorico();
+        atualizarResumo();
+      }
+    }
+
+    // Inicializar demanda visual (0 sessões)
+    document.getElementById('demanda-bar').style.width = '0%';
+    document.getElementById('demanda-bar').style.background = '#28a745';
+    document.getElementById('demanda-global-info').innerHTML ='<p style="font-size:0.85rem;">Nenhuma sessão ativa. Potência em uso: <strong>0 kW</strong> de 28 kW totais.</p>';
+  </script>
+</body>
+
+</html>

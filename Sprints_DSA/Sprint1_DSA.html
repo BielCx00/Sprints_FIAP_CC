@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador de Recarga</title>
+</head>
+
+<body>
+
+    <h1>Simulador de Sessão de Recarga</h1>
+
+    <div>
+        <input type="text" id="nome" placeholder="Digite um nome">
+        <br><br>
+
+        <input type="radio" name="tipo" value="morador"> Morador
+        <input type="radio" name="tipo" value="visitante"> Visitante
+        <br><br>
+
+        <button onclick="inicio_sessao()">Iniciar Sessão</button>
+    </div>
+
+    <hr>
+
+    <div>
+        <h2 id="alerta_inicio"></h2>
+        <h3>Status da Demanda</h3>
+        <div id="demanda_info"></div>
+
+        <label>Placas solares:</label>
+        <input type="number" id="placas">
+        <br><br>
+
+        <label>% Bateria:</label>
+        <input type="number" id="bateria_veiculo">
+        <p id="tempo_carga_total"></p>
+
+        <label>Horário fim:</label>
+        <input type="time" id="tempo_carregando">
+        <br><br>
+
+        <button onclick="fim_sessao()">Finalizar Sessão</button>
+    </div>
+
+    <hr>
+
+    <h2>Relatório da Sessão</h2>
+    <div id="relatorio"></div>
+
+    <hr>
+
+    <h2>Histórico</h2>
+
+    <select id="lista_sessoes"></select>
+    <br><br>
+
+    <button onclick="mostrarSessaoSelecionada()">Ver Sessão</button>
+
+    <div id="historico"></div>
+
+    <script>
+        // Dados permanentes
+        let nomes = [];
+        let inicio_carga = [];
+        let fim_carga = [];
+        let data = [];
+        let energia_consumida = [];
+        let cobranca = [];
+        let porcentagem_inicial = [];
+        let porcentagem_final_array = [];
+        let status_sessao = [];
+        // Parâmetros fixos do sistema
+        let capacidade_bateria = 60;
+        let potencia_carregamento = 7;
+        let tarifa = 0.72;
+        // Variáveis temporárias da sessão
+        let nome_sessao = "";
+        let tipo_usuario = "";
+        let energia_sessão = 0;
+        let preco_carga = 0;
+        let TempoEstimadoCarga = 0;
+        let Porcentagem_veiculo = 0;
+        let porcentagem_final = 0;
+
+        let Horario_inicio = 0;
+        let Horario_fim = 0;
+        let Diferenca_Tempos = 0;
+        let dia_sessão = 0;
+
+        let pausado = false;
+        let consumoCasa_global = 0;
+        let mensagem_demanda = "";
+        let energia_final = 0;
+
+        function inicio_sessao() {
+
+            nome_sessao = document.getElementById("nome").value;
+            tipo_usuario = document.querySelector('input[name="tipo"]:checked');
+
+            if (nome_sessao === "" || !tipo_usuario) {
+                alert("Preencha todos os campos");
+                return;
+            }
+
+            Horario_inicio = new Intl.DateTimeFormat('pt-BR', {
+                timeStyle: 'short'
+            }).format(new Date());
+
+            dia_sessão = new Intl.DateTimeFormat('pt-BR', {
+                dateStyle: 'short'
+            }).format(new Date());
+
+            document.getElementById("alerta_inicio").innerHTML =
+                "Sessão iniciada - " + nome_sessao + " (" + tipo_usuario.value + ") às " + Horario_inicio;
+        }
+
+        const inputTexto = document.getElementById('bateria_veiculo');
+        const textoExibido = document.getElementById('tempo_carga_total');
+
+        function mostrarTempoCarregado() {
+
+            Porcentagem_veiculo = Number(inputTexto.value);
+
+            if (Porcentagem_veiculo >= 100) {
+                textoExibido.textContent = "Bateria cheia";
+                TempoEstimadoCarga = 0;
+                return;
+            }
+
+
+            let energia_restante =
+                capacidade_bateria * (100 - Porcentagem_veiculo) / 100;
+
+            TempoEstimadoCarga = energia_restante / potencia_carregamento;
+
+            textoExibido.textContent =
+                "Tempo estimado: " + TempoEstimadoCarga.toFixed(2) + " horas";
+        }
+
+        inputTexto.addEventListener('input', mostrarTempoCarregado);
+
+        function fim_sessao() {
+
+            mostrarTempoCarregado();
+
+            calculoPrecoCarga();
+            salvarSessao();
+
+            document.getElementById("relatorio").innerHTML =
+                "Nome: " + nome_sessao +
+                "<br>Tipo: " + tipo_usuario.value +
+                "<br>Início: " + Horario_inicio +
+                "<br>Fim: " + Horario_fim +
+                "<br>% Inicial: " + Porcentagem_veiculo + "%" +
+                "<br>% Final: " + porcentagem_final.toFixed(1) + "%" +
+                "<br>Energia: " + energia_final.toFixed(2) + " kWh" +
+                "<br>Preço: R$ " + preco_carga.toFixed(2) +
+                "<br>Status: " + (pausado ? "Pausado" : "Normal");
+        }
+
+        function calculoEnergiaConsumida() {
+
+            Horario_fim = document.getElementById('tempo_carregando').value;
+
+            let [horasFim, minutosFim] = Horario_fim.split(':').map(Number);
+            let [horasIni, minutosIni] = Horario_inicio.split(':').map(Number);
+
+            let inicioMin = (horasIni * 60) + minutosIni;
+            let fimMin = (horasFim * 60) + minutosFim;
+
+            if (fimMin < inicioMin) fimMin += 24 * 60;
+
+            Diferenca_Tempos = (fimMin - inicioMin) / 60;
+
+
+            demanda();
+
+            // energia entregue pelo carregador
+            let energia_calculada = potencia_carregamento * Diferenca_Tempos;
+
+            // energia necessária
+            let energia_necessaria =
+                capacidade_bateria * (100 - Porcentagem_veiculo) / 100;
+
+            // limite 
+            energia_sessão = Math.min(energia_calculada, energia_necessaria);
+
+            // cálculo da %
+            porcentagem_final = Porcentagem_veiculo + (energia_sessão / capacidade_bateria) * 100;
+
+            if (porcentagem_final > 100) porcentagem_final = 100;
+
+            Desconto();
+        }
+
+        function calculoPrecoCarga() {
+
+            calculoEnergiaConsumida();
+
+            let hora = Number(Horario_fim.split(":")[0]);
+            let minuto = Number(Horario_fim.split(":")[1]);
+
+            let horarioDecimal = hora + (minuto / 60);
+
+            let tarifa_final = tarifa;
+
+            // Tarifas baseadas nos horarios
+            if (horarioDecimal < 16.5 || horarioDecimal >= 21.5) {
+                tarifa_final *= 0.7;
+            } else if (
+                (horarioDecimal >= 16.5 && horarioDecimal < 17.5) ||
+                (horarioDecimal >= 20.5 && horarioDecimal < 21.5)
+            ) {
+                tarifa_final *= 1.3;
+            } else {
+                tarifa_final *= 2;
+            }
+
+            if (tipo_usuario.value === "visitante") {
+                tarifa_final *= 1.2;
+            }
+
+            preco_carga = energia_final * tarifa_final;
+
+            atualizarTelaDemanda();
+        }
+
+        function salvarSessao() {
+
+            nomes.push(nome_sessao);
+            inicio_carga.push(Horario_inicio);
+            fim_carga.push(Horario_fim);
+            energia_consumida.push(energia_final);
+            cobranca.push(preco_carga);
+            data.push(dia_sessão);
+
+            porcentagem_inicial.push(Porcentagem_veiculo);
+            porcentagem_final_array.push(porcentagem_final);
+            status_sessao.push(pausado ? "Pausado" : "Normal");
+
+            atualizarListaHistorico();
+        }
+
+
+
+        function atualizarListaHistorico() {
+
+            let select = document.getElementById("lista_sessoes");
+            select.innerHTML = "";
+
+            for (let i = 0; i < nomes.length; i++) {
+
+                let option = document.createElement("option");
+
+                // pega só dia e mês
+                let partesData = data[i].split('/');
+                let diaMes = partesData[0] + "/" + partesData[1];
+
+                option.value = i;
+                option.text = nomes[i] + " - " + diaMes;
+
+                select.appendChild(option);
+            }
+        }
+
+        function mostrarSessaoSelecionada() {
+
+            let index = document.getElementById("lista_sessoes").value;
+
+            if (index === "") {
+                alert("Selecione uma sessão");
+                return;
+            }
+
+            document.getElementById("historico").innerHTML =
+                "Nome: " + nomes[index] +
+                "<br>Data: " + data[index] +
+                "<br>Início: " + inicio_carga[index] +
+                "<br>Fim: " + fim_carga[index] +
+                "<br>% Inicial: " + porcentagem_inicial[index] + "%" +
+                "<br>% Final: " + porcentagem_final_array[index].toFixed(1) + "%" +
+                "<br>Energia: " + energia_consumida[index].toFixed(2) + " kWh" +
+                "<br>Preço: R$ " + cobranca[index].toFixed(2) +
+                "<br>Status: " + status_sessao[index];
+        }
+
+        function Desconto() {
+
+            let placas = Number(document.getElementById("placas").value);
+
+            energia_final = energia_sessão;
+
+            if (placas > 0) {
+                energia_final -= placas * 0.2;
+                if (energia_final < 0) energia_final = 0;
+            }
+        }
+
+        function demanda() {
+
+            let consumoCasa = Math.random() * 10;
+
+            pausado = false;
+
+            if (consumoCasa > potencia_carregamento * 1.7) {
+
+                Diferenca_Tempos = 0;
+                pausado = true;
+
+                mensagem_demanda =
+                    "Carregamento bloqueado<br>" +
+                    "Consumo: " + consumoCasa.toFixed(2) + " kW";
+
+            }
+            else if (consumoCasa > potencia_carregamento) {
+
+                Diferenca_Tempos *= 0.5;
+                pausado = true;
+
+                mensagem_demanda =
+                    "Alta demanda<br>" +
+                    "Consumo: " + consumoCasa.toFixed(2) + " kW<br>" +
+                    "Potência reduzida";
+
+            }
+            else {
+
+                mensagem_demanda =
+                    "Demanda normal<br>" +
+                    "Consumo: " + consumoCasa.toFixed(2) + " kW";
+            }
+
+            atualizarTelaDemanda();
+        }
+
+        function atualizarTelaDemanda() {
+            document.getElementById("demanda_info").innerHTML = mensagem_demanda;
+        }
+
+    </script>
+
+</body>
+
+</html>
